@@ -14,7 +14,7 @@ jobs:
       - name: Ambil source BossPo
         uses: actions/checkout@v4
 
-       - name: Ekstrak project Android
+      - name: Ekstrak project Android
         run: |
           mkdir -p android-src
           unzip -q BossPo_Source_GitHub_FRESH.zip -d android-src
