@@ -55,7 +55,7 @@ jobs:
           test -n "$KEY_ALIAS"
           test -n "$KEY_PASSWORD"
           echo "Semua signing secret tersedia"
-⁷
+
       - name: Buat signing key
         env:
           KEYSTORE_B64: ${{ secrets.BOSSPO_KEYSTORE_BASE64 }}
