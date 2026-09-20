@@ -14,11 +14,15 @@ jobs:
       - name: Ambil source BossPo
         uses: actions/checkout@v4
 
-      - name: Ekstrak project Android
+       - name: Ekstrak project Android
         run: |
           mkdir -p android-src
           unzip -q BossPo_Source_GitHub_FRESH.zip -d android-src
           test -f android-src/github_source/app/build.gradle
+
+      - name: Perbaiki BossPoFileProvider
+        run: |
+          sed -i 's/requireContext()/requireProviderContext()/g' android-src/github_source/app/src/main/java/com/bosspo/juraganpo/BossPoFileProvider.java
 
       - name: Siapkan Java 17
         uses: actions/setup-java@v4
