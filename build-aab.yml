@@ -1,0 +1,55 @@
+name: Build BossPo AAB
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Ambil source BossPo
+        uses: actions/checkout@v4
+
+      - name: Ekstrak project Android
+        run: |
+          mkdir -p android-src
+          unzip -q BossPo_Source_GitHub_FRESH.zip -d android-src
+          test -f android-src/github_source/app/build.gradle
+
+      - name: Siapkan Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Siapkan Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android API 36
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Siapkan Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.6.0'
+
+      - name: Build AAB
+        working-directory: android-src/github_source
+        run: gradle --no-daemon :app:bundleRelease
+
+      - name: Cek hasil AAB
+        working-directory: android-src/github_source
+        run: |
+          test -f app/build/outputs/bundle/release/app-release.aab
+          ls -lh app/build/outputs/bundle/release/app-release.aab
+
+      - name: Simpan AAB
+        uses: actions/upload-artifact@v4
+        with:
+          name: BossPo-AAB-Test
+          path: android-src/github_source/app/build/outputs/bundle/release/app-release.aab
+          if-no-files-found: error
