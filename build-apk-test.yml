@@ -1,0 +1,88 @@
+name: Build BossPo APK Uji AdMob
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'BossPo_Source_GitHub_FRESH.zip'
+      - '.github/workflows/build-apk-test.yml'
+
+jobs:
+  build-apk-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Ambil source BossPo
+        uses: actions/checkout@v4
+
+      - name: Ekstrak project Android
+        run: |
+          rm -rf android-src
+          mkdir -p android-src
+          unzip -q BossPo_Source_GitHub_FRESH.zip -d android-src
+          test -f android-src/github_source/app/build.gradle
+
+      - name: Perbaiki BossPoFileProvider
+        run: |
+          sed -i 's/requireContext()/requireProviderContext()/g'             android-src/github_source/app/src/main/java/com/bosspo/juraganpo/BossPoFileProvider.java
+
+      - name: Buat paket uji terpisah
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path("android-src/github_source/app/build.gradle")
+          s = p.read_text()
+
+          old = 'applicationId "com.bosspo.juraganpo"'
+          new = 'applicationId "com.bosspo.juraganpo.admobtest"'
+
+          if old not in s:
+              old = "applicationId 'com.bosspo.juraganpo'"
+              new = "applicationId 'com.bosspo.juraganpo.admobtest'"
+
+          if old not in s:
+              raise SystemExit("applicationId BossPo tidak ditemukan di app/build.gradle")
+
+          s = s.replace(old, new, 1)
+          p.write_text(s)
+          print("Application ID uji: com.bosspo.juraganpo.admobtest")
+          PY
+
+      - name: Siapkan Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install Android API 36
+        run: |
+          SDKMANAGER=$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | head -n 1)
+          test -n "$SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Siapkan Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.6.0'
+
+      - name: Build APK uji
+        working-directory: android-src/github_source
+        run: gradle --no-daemon :app:assembleDebug
+
+      - name: Siapkan APK final
+        working-directory: android-src/github_source
+        run: |
+          cp app/build/outputs/apk/debug/app-debug.apk              app/build/outputs/apk/debug/BossPo-AdMob-Test.apk
+          test -s app/build/outputs/apk/debug/BossPo-AdMob-Test.apk
+          ls -lh app/build/outputs/apk/debug/BossPo-AdMob-Test.apk
+
+      - name: Simpan APK uji
+        uses: actions/upload-artifact@v4
+        with:
+          name: BossPo-AdMob-Test-APK
+          path: android-src/github_source/app/build/outputs/apk/debug/BossPo-AdMob-Test.apk
+          if-no-files-found: error
+          retention-days: 14
